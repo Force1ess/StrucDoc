@@ -28,7 +28,9 @@ keywords = [
 ]
 dependencies = [
     "beautifulsoup4",
+    "fasttext",
     "html2image",
+    "huggingface-hub",
     "jinja2",
     "json_repair",
     "mistune",

@@ -6,12 +6,14 @@ from strucdoc import AsyncLLM, Document, package_join
 
 TESTDOC = package_join("..", "Example-PPTAgent-MinerU")
 language_model = AsyncLLM(
-    model=os.environ["LANGUAGE_MODEL"],
-    base_url=os.environ["API_BASE"],
+    model=os.environ.get("LANGUAGE_MODEL"),
+    api_key=os.environ.get("OPENAI_API_KEY"),
+    base_url=os.environ.get("API_BASE"),
 )
 vision_model = AsyncLLM(
-    model=os.environ["VISION_MODEL"],
-    base_url=os.environ["API_BASE"],
+    model=os.environ.get("VISION_MODEL"),
+    api_key=os.environ.get("OPENAI_API_KEY"),
+    base_url=os.environ.get("API_BASE"),
 )
 
 
