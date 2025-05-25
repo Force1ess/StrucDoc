@@ -7,6 +7,7 @@ from mistune import html as markdown
 from PIL import Image
 from pydantic import BaseModel, field_validator
 
+from .doc_utils import parse_table_with_merges
 from .llms import AsyncLLM
 from .utils import (
     edit_distance,
@@ -16,7 +17,6 @@ from .utils import (
     pexists,
     pjoin,
 )
-from .doc_utils import parse_table_with_merges
 
 env = Environment(undefined=StrictUndefined)
 
@@ -96,8 +96,6 @@ class Table(Media):
             logger.debug(f"Caption: {self.caption}")
 
 
-
-
 class SubSection(BaseModel):
     title: str
     content: str
@@ -124,7 +122,9 @@ class Section(BaseModel):
     def json_schema(cls):
         pydantic_schema = cls.model_json_schema()
         # Modify schema to only show SubSection in subsections, and add Metadata
-        pydantic_schema["properties"]["blocks"]["items"] = {"$ref": "#/$defs/SubSection"}
+        pydantic_schema["properties"]["blocks"]["items"] = {
+            "$ref": "#/$defs/SubSection"
+        }
         pydantic_schema["properties"]["metadata"] = {
             "additionalProperties": {"type": "string"},
             "title": "Metadata",

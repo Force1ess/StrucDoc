@@ -1,24 +1,22 @@
 import asyncio
 import contextlib
 import re
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Optional
 
 from jinja2 import Environment, StrictUndefined
-from dataclasses import dataclass
-from pydantic import BaseModel, create_model, Field
 
 from .agent import Agent
-from .llms import AsyncLLM
-from .utils import get_logger, package_join, pexists, pbasename, pjoin, Language
 from .doc_utils import (
     LogicHeadings,
-    split_markdown_by_headings,
-    process_markdown_content,
     get_tree_structure,
+    process_markdown_content,
+    split_markdown_by_headings,
 )
-
 from .element import Section, SubSection, Table, link_medias
+from .llms import AsyncLLM
+from .utils import Language, get_logger, package_join, pbasename, pexists, pjoin
 
 logger = get_logger(__name__)
 
@@ -35,13 +33,15 @@ HEADING_EXTRACT_PROMPT = env.from_string(
 @dataclass
 class Document:
     image_dir: str
-    blocks: list[Section]
+    sections: list[Section]
     metadata: dict[str, str]
     language: Language
 
     def __post_init__(self):
         self.metadata["presentation-date"] = datetime.now().strftime("%Y-%m-%d")
-        assert pexists(self.image_dir), f"image directory is not found: {self.image_dir}"
+        assert pexists(
+            self.image_dir
+        ), f"image directory is not found: {self.image_dir}"
         for media in self.iter_medias():
             if pexists(media.path):
                 continue
@@ -120,18 +120,20 @@ class Document:
         )
         async with asyncio.TaskGroup() as tg:
             for chunk in split_markdown_by_headings(
-                markdown_content, headings, adjusted_headings['headings']
+                markdown_content, headings, adjusted_headings["headings"]
             ):
-                tasks.append(tg.create_task(
-                    cls._parse_chunk(
-                        doc_extractor,
-                        chunk,
-                        image_dir,
-                        language_model,
-                        vision_model,
-                        limiter,
+                tasks.append(
+                    tg.create_task(
+                        cls._parse_chunk(
+                            doc_extractor,
+                            chunk,
+                            image_dir,
+                            language_model,
+                            vision_model,
+                            limiter,
+                        )
                     )
-                ))
+                )
 
         # Process results in order
         for task in tasks:
@@ -142,7 +144,12 @@ class Document:
         merged_metadata = await language_model(
             MERGE_METADATA_PROMPT.render(metadata=metadata), return_json=True
         )
-        return Document(image_dir=image_dir, metadata=merged_metadata, blocks=sections, language=Language.CJK)
+        return Document(
+            image_dir=image_dir,
+            metadata=merged_metadata,
+            blocks=sections,
+            language=Language.CJK,
+        )
 
     def __contains__(self, key: str):
         for section in self.blocks:
@@ -202,54 +209,3 @@ class Document:
             "blocks": [section.model_dump(mode="json") for section in self.blocks],
             "language": self.language.value,
         }
-
-
-class OutlineItem(BaseModel):
-    purpose: str
-    section: str
-    indexs: dict[str, list[str]] | str = Field(default_factory=dict)
-    images: list[str] = Field(default_factory=list)
-
-    def retrieve(self, slide_idx: int, document: Document):
-        subsections = document.retrieve(self.indexs)
-        header = f"Slide-{slide_idx+1}: {self.purpose}\n"
-        content = ""
-        for subsection in subsections:
-            content += f"Paragraph: {subsection.title}\nContent: {subsection.content}\n"
-        images = [
-            f"Image: {document.find_caption(caption)}\nCaption: {caption}"
-            for caption in self.images
-        ]
-        return header, content, images
-
-def create_dynamic_outline_model(
-    allowed_images: list[str], allowed_indexs: dict[str, list[str]]
-) -> type[BaseModel]:
-    """
-    Dynamically create OutlineItem model with constrained images and indexs fields
-    """
-
-    # Create Literal type for images
-    ImagesLiteral = Literal[tuple(allowed_images)]  # type: ignore
-
-    # Create constraint model for indexs field
-    # First create corresponding Literal type for each key
-    index_fields = {}
-    for key, values in allowed_indexs.items():
-        ValueLiteral = Literal[tuple(values)]  # type: ignore
-        index_fields[key] = (list[ValueLiteral], Field(default_factory=list))
-
-    # Create IndexsModel
-    IndexsModel = create_model("IndexsModel", **index_fields)
-
-    # Create dynamic OutlineItem model
-    DynamicOutlineItem = create_model(
-        "DynamicOutlineItem",
-        purpose=(str, ...),
-        section=(str, ...),
-        indexs=(IndexsModel, Field(default_factory=dict)),
-        images=(list[ImagesLiteral], Field(default_factory=list)),
-        __base__=BaseModel,
-    )
-
-    return DynamicOutlineItem

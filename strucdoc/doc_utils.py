@@ -1,10 +1,11 @@
 import re
 from typing import Literal
 
-from fasttext import load_model
 from bs4 import BeautifulSoup
+from fasttext import load_model
 from huggingface_hub import hf_hub_download
 from pydantic import BaseModel, Field, create_model
+
 from .utils import Language, edit_distance
 
 MARKDOWN_IMAGE_REGEX = re.compile(r"!\[.*\]\(.*\)")
@@ -169,7 +170,7 @@ def display_results(chunks):
     print(f"Root level total: {root_total}")
 
 
-def get_tree_structure(markdown: str):
+def get_tree_structure(markdown: str, add_tag: bool = True):
     """
     Display tree structure statistics
 
@@ -183,9 +184,13 @@ def get_tree_structure(markdown: str):
     for chunk in chunks_with_hierarchy:
         indent = "  " * (chunk["level"] - 1)
         tree_symbol = "├─" if chunk["level"] > 1 else "■"
+        if add_tag:
+            heading = f"<title>{chunk['heading']}</title>"
+        else:
+            heading = chunk["heading"]
 
         tree += (
-            f"{indent}{tree_symbol} {chunk['heading']} "
+            f"{indent}{tree_symbol} {heading} "
             f"[Direct:{chunk['direct_char_count']} | Total Characters:{chunk['total_char_count']}]\n"
         )
 
@@ -288,7 +293,7 @@ def process_markdown_content(
         after_chunk = ""
 
         # Get preceding context
-        for chunk in paragraphs[:media["index"]]:
+        for chunk in paragraphs[: media["index"]]:
             pre_chunk += chunk["markdown_content"] + "\n\n"
             if len(pre_chunk) > max_chunk_size:
                 break
@@ -378,6 +383,6 @@ class LogicHeadings(BaseModel):
     def get_literal_schema(cls, allowed_headings: list[str]):
         return create_model(
             cls.__name__,
-            headings=(list[Literal[tuple(allowed_headings)]], Field(...)), # type: ignore
+            headings=(list[Literal[tuple(allowed_headings)]], Field(...)),  # type: ignore
             __base__=BaseModel,
         )

@@ -7,10 +7,10 @@ import tiktoken
 import yaml
 from jinja2 import Environment, StrictUndefined, Template
 from PIL import Image
-from torch import Tensor, cosine_similarity
 from pydantic import BaseModel
+from torch import Tensor, cosine_similarity
 
-from .llms import LLM, AsyncLLM
+from .llms import AsyncLLM
 from .utils import get_json_from_response, package_join
 
 ENCODING = tiktoken.encoding_for_model("gpt-4o")
@@ -23,6 +23,7 @@ RETRY_TEMPLATE = Template(
             Give your corrected output in the same format without including the previous output:
             """
 )
+
 
 @dataclass
 class Turn:
@@ -116,7 +117,6 @@ class Agent:
         self.input_tokens += turns[-1].input_tokens
         self.output_tokens += turns[-1].output_tokens
         self.input_tokens += self.system_tokens
-
 
     @property
     def next_turn_id(self):

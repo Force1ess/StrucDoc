@@ -1,9 +1,8 @@
-import asyncio
-from enum import Enum, auto
 import json
 import logging
 import os
 import traceback
+from enum import Enum, auto
 from itertools import product
 from typing import Any
 
@@ -21,7 +20,7 @@ class Language(Enum):
     CJK = auto()
 
 
-def get_logger(name="pptagent", level=None):
+def get_logger(name="strucdoc", level=None):
     """
     Get a logger with the specified name and level.
 

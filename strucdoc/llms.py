@@ -4,11 +4,11 @@ import threading
 from dataclasses import dataclass
 from typing import Optional, Union
 
-from pydantic import BaseModel
 import torch
 from oaib import Auto
 from openai import AsyncOpenAI, OpenAI
 from openai.types.chat import ChatCompletion
+from pydantic import BaseModel
 
 from .utils import get_json_from_response, get_logger, tenacity_decorator
 
